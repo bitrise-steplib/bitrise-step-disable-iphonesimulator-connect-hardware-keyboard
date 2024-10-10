@@ -9,6 +9,7 @@ import (
 	"github.com/bitrise-io/go-steputils/v2/stepenv"
 	"github.com/bitrise-io/go-utils/v2/env"
 	"github.com/bitrise-io/go-utils/v2/log"
+	"github.com/bitrise-io/go-utils/v2/pathutil"
 	"github.com/bitrise-steplib/bitrise-step-disable-iphonesimulator-connect-hardware-keyboard/simpref"
 )
 
@@ -75,13 +76,18 @@ func backupIPhoneSimulatorPreferences(pth string, logger log.Logger) {
 }
 
 func copyFile(src string, logger log.Logger) (string, error) {
+	absSrc, err := pathutil.NewPathModifier().AbsPath(src)
+	if err != nil {
+		return "", err
+	}
+
 	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
-	dst := filepath.Join(tmpDir, filepath.Base(src))
+	dst := filepath.Join(tmpDir, filepath.Base(absSrc))
 
-	in, err := os.Open(src)
+	in, err := os.Open(absSrc)
 	if err != nil {
 		return "", err
 	}
