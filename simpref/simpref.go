@@ -2,30 +2,69 @@ package simpref
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"time"
 
 	"github.com/bitrise-io/go-plist"
+	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
 	"github.com/bitrise-io/go-utils/v2/pathutil"
+	"github.com/bitrise-io/go-xcode/v2/destination"
+	"github.com/bitrise-io/go-xcode/v2/simulator"
 )
 
-const DefaultIPhoneSimulatorPreferencesPth = "~/Library/Preferences/com.apple.iphonesimulator.plist"
+const (
+	DefaultIPhoneSimulatorPreferencesPth = "~/Library/Preferences/com.apple.iphonesimulator.plist"
+	defaultSimulatorDestination          = "platform=iOS Simulator,name=Bitrise iOS default,OS=latest"
+)
 
 type IPhoneSimulatorPreferences struct {
 	pth         string
 	format      int
 	preferences map[string]any
 
-	logger log.Logger
+	fileManager  fileutil.FileManager
+	pathModifier pathutil.PathModifier
+	logger       log.Logger
 }
 
-func OpenIPhoneSimulatorPreferences(pth string, logger log.Logger) (*IPhoneSimulatorPreferences, error) {
-	absPth, err := pathutil.NewPathModifier().AbsPath(pth)
+func OpenIPhoneSimulatorPreferences(pth string, deviceFinder destination.DeviceFinder, simulatorManager simulator.Manager, pathModifier pathutil.PathModifier, fileManager fileutil.FileManager, logger log.Logger) (*IPhoneSimulatorPreferences, error) {
+	absPth, err := pathModifier.AbsPath(pth)
 	if err != nil {
 		return nil, err
 	}
 
-	preferencesBytes, err := os.ReadFile(absPth)
+	prefsFile, err := fileManager.Open(absPth)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to open file: %w", err)
+		}
+
+		defaultIPhoneSimulatorPreferencesAbsPth, err := pathModifier.AbsPath(DefaultIPhoneSimulatorPreferencesPth)
+		if err != nil {
+			return nil, err
+		}
+
+		if absPth != defaultIPhoneSimulatorPreferencesAbsPth {
+			return nil, fmt.Errorf("file not found: %s", absPth)
+		}
+
+		logger.Debugf("Initialising default simulator preferences")
+
+		prefsFile, err = initialiseDefaultSimulatorPreferences(absPth, deviceFinder, simulatorManager, fileManager)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	defer func() {
+		if err := prefsFile.Close(); err != nil {
+			logger.Warnf("Failed to close file: %s", err)
+		}
+	}()
+
+	preferencesBytes, err := io.ReadAll(prefsFile)
 	if err != nil {
 		return nil, err
 	}
@@ -37,10 +76,12 @@ func OpenIPhoneSimulatorPreferences(pth string, logger log.Logger) (*IPhoneSimul
 	}
 
 	return &IPhoneSimulatorPreferences{
-		pth:         absPth,
-		format:      format,
-		preferences: preferences,
-		logger:      logger,
+		pth:          absPth,
+		format:       format,
+		preferences:  preferences,
+		fileManager:  fileManager,
+		pathModifier: pathModifier,
+		logger:       logger,
 	}, nil
 }
 
@@ -81,6 +122,44 @@ func (prefs *IPhoneSimulatorPreferences) DisableConnectHardwareKeyboard() error 
 	}
 
 	return nil
+}
+
+func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.DeviceFinder, simulatorManager simulator.Manager, fileManager fileutil.FileManager) (*os.File, error) {
+	simulatorDestination, err := destination.NewSimulator(defaultSimulatorDestination)
+	if err != nil || simulatorDestination == nil {
+		return nil, fmt.Errorf("invalid destination specifier (%s): %w", defaultSimulatorDestination, err)
+	}
+
+	device, err := deviceFinder.FindDevice(*simulatorDestination)
+	if err != nil {
+		return nil, fmt.Errorf("simulator UDID lookup failed: %w", err)
+	}
+
+	if err := simulatorManager.Boot(device); err != nil {
+		return nil, fmt.Errorf("simulator boot failed: %w", err)
+	}
+
+	var prefsFile *os.File
+
+	waitTimeSec := 30
+	for waitTimeSec > 0 {
+		prefsFile, err = fileManager.Open(pth)
+		if err != nil && !os.IsNotExist(err) {
+			return nil, fmt.Errorf("failed to open file: %w", err)
+		}
+		if prefsFile != nil {
+			break
+		}
+
+		time.Sleep(5 * time.Second)
+		waitTimeSec -= 5
+	}
+
+	if prefsFile == nil {
+		return nil, fmt.Errorf("couldn't initialise iphonesimulator preferences")
+	}
+
+	return prefsFile, nil
 }
 
 func getMap(raw map[string]any, key string) (map[string]any, error) {
