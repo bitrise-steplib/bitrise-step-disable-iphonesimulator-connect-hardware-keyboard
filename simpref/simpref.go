@@ -146,7 +146,7 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 
 	var prefsFile *os.File
 
-	waitTimeSec := 90
+	waitTimeSec := 300
 	for waitTimeSec > 0 {
 		prefsFile, err = fileManager.Open(pth)
 		if err != nil && !os.IsNotExist(err) {
