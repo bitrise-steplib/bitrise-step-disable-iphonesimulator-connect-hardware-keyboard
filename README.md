@@ -24,13 +24,16 @@ You can also run this step directly with [Bitrise CLI](https://github.com/bitris
 
 | Key | Description | Flags | Default |
 | --- | --- | --- | --- |
-| `ihpnesimulator_preferences_pth` | The path of the iphonesimulator preferences file. | required | `~/Library/Preferences/com.apple.iphonesimulator.plist` |
+| `iphonesimulator_preferences_pth` | The path of the iphonesimulator preferences file. | required | `~/Library/Preferences/com.apple.iphonesimulator.plist` |
 | `verbose` | Print verbose information. | required | `no` |
 </details>
 
 <details>
 <summary>Outputs</summary>
-There are no outputs defined in this step
+
+| Environment Variable | Description |
+| --- | --- |
+| `BACKUP_IPHONESIMULATOR_PREFERENCES_PATH` | The path of the backup iphonesimulator preferences file. |
 </details>
 
 ## 🙋 Contributing
