@@ -52,7 +52,7 @@ func OpenIPhoneSimulatorPreferences(pth string, deviceFinder destination.DeviceF
 
 		logger.Debugf("Initialising default simulator preferences")
 
-		prefsFile, err = initialiseDefaultSimulatorPreferences(absPth, deviceFinder, simulatorManager, fileManager)
+		prefsFile, err = initialiseDefaultSimulatorPreferences(absPth, deviceFinder, simulatorManager, fileManager, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +124,7 @@ func (prefs *IPhoneSimulatorPreferences) DisableConnectHardwareKeyboard() error 
 	return nil
 }
 
-func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.DeviceFinder, simulatorManager simulator.Manager, fileManager fileutil.FileManager) (*os.File, error) {
+func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.DeviceFinder, simulatorManager simulator.Manager, fileManager fileutil.FileManager, logger log.Logger) (*os.File, error) {
 	simulatorDestination, err := destination.NewSimulator(defaultSimulatorDestination)
 	if err != nil || simulatorDestination == nil {
 		return nil, fmt.Errorf("invalid destination specifier (%s): %w", defaultSimulatorDestination, err)
@@ -138,6 +138,11 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 	if err := simulatorManager.Boot(device); err != nil {
 		return nil, fmt.Errorf("simulator boot failed: %w", err)
 	}
+	defer func() {
+		if err := simulatorManager.Shutdown(device.ID); err != nil {
+			logger.Warnf("Failed to shutdown simulator: %s", err)
+		}
+	}()
 
 	var prefsFile *os.File
 
