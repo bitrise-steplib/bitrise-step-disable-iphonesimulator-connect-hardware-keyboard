@@ -6,6 +6,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/bitrise-io/go-utils/v2/command"
+	"github.com/bitrise-io/go-utils/v2/env"
+
 	"github.com/bitrise-io/go-plist"
 	"github.com/bitrise-io/go-utils/v2/fileutil"
 	"github.com/bitrise-io/go-utils/v2/log"
@@ -135,9 +138,14 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 		return nil, fmt.Errorf("simulator UDID lookup failed: %w", err)
 	}
 
-	if err := simulatorManager.Boot(device); err != nil {
-		return nil, fmt.Errorf("simulator boot failed: %w", err)
+	factory := command.NewFactory(env.NewRepository())
+	cmd := factory.Create("open", []string{"-a", "Simulator", "--args", "-CurrentDeviceUDID", device.ID}, nil)
+	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
+	if err != nil {
+		fmt.Println(out)
+		return nil, err
 	}
+
 	defer func() {
 		if err := simulatorManager.Shutdown(device.ID); err != nil {
 			logger.Warnf("Failed to shutdown simulator: %s", err)
