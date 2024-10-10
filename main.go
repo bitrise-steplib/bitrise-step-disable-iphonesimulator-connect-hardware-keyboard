@@ -78,7 +78,30 @@ func backupIPhoneSimulatorPreferences(pth string, logger log.Logger) {
 	logger.Println()
 	logger.Infof("Backing up iPhone Simulator preferences: %s", pth)
 
-	backupPth, err := copyFile(pth, logger)
+	absPth, err := pathutil.NewPathModifier().AbsPath(pth)
+	if err != nil {
+		logger.Errorf("Failed to get absolute path: %s", err)
+		os.Exit(1)
+	}
+
+	in, err := os.Open(absPth)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Printf("File not found: %s, skipping backup", absPth)
+			return
+		}
+
+		logger.Errorf("Failed to open file: %s", err)
+		os.Exit(1)
+	}
+
+	defer func() {
+		if err := in.Close(); err != nil {
+			logger.Warnf("Failed to close file: %s", err)
+		}
+	}()
+
+	backupPth, err := copyFile(in, logger)
 	if err != nil {
 		logger.Errorf("Failed to backup preferences: %s", err)
 		os.Exit(1)
@@ -92,27 +115,12 @@ func backupIPhoneSimulatorPreferences(pth string, logger log.Logger) {
 	logger.Printf("Preferences backed up to: $%s=%s", backupIPhoneSimulatorPreferencesPthEnvKey, backupPth)
 }
 
-func copyFile(src string, logger log.Logger) (string, error) {
-	absSrc, err := pathutil.NewPathModifier().AbsPath(src)
-	if err != nil {
-		return "", err
-	}
-
+func copyFile(in *os.File, logger log.Logger) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
-	dst := filepath.Join(tmpDir, filepath.Base(absSrc))
-
-	in, err := os.Open(absSrc)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if err := in.Close(); err != nil {
-			logger.Warnf("Failed to close file: %s", err)
-		}
-	}()
+	dst := filepath.Join(tmpDir, filepath.Base(in.Name()))
 
 	out, err := os.Create(dst)
 	if err != nil {
