@@ -161,7 +161,13 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 			return nil, fmt.Errorf("failed to open file: %w", err)
 		}
 		if prefsFile != nil {
-			break
+			ok, err := checkPrefsFile(prefsFile)
+			if err != nil {
+				return nil, err
+			}
+			if ok {
+				break
+			}
 		}
 
 		time.Sleep(5 * time.Second)
@@ -173,6 +179,28 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 	}
 
 	return prefsFile, nil
+}
+
+func checkPrefsFile(prefsFile *os.File) (bool, error) {
+	preferencesBytes, err := io.ReadAll(prefsFile)
+	if err != nil {
+		return false, err
+	}
+
+	var preferences map[string]any
+	_, err = plist.Unmarshal(preferencesBytes, &preferences)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = getMap(preferences, "DevicePreferences")
+	if err != nil {
+		if err.Error() == "key not found: DevicePreferences" {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func getMap(raw map[string]any, key string) (map[string]any, error) {
