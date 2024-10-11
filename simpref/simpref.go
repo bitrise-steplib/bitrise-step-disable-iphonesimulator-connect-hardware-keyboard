@@ -168,6 +168,7 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 			if ok {
 				break
 			}
+			logger.Debugf("Simulator preferences not ready")
 		}
 
 		time.Sleep(5 * time.Second)
