@@ -146,11 +146,11 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 		return nil, err
 	}
 
-	defer func() {
-		if err := simulatorManager.Shutdown(device.ID); err != nil {
-			logger.Warnf("Failed to shutdown simulator: %s", err)
-		}
-	}()
+	//defer func() {
+	//	if err := simulatorManager.Shutdown(device.ID); err != nil {
+	//		logger.Warnf("Failed to shutdown simulator: %s", err)
+	//	}
+	//}()
 
 	var prefsFile *os.File
 
@@ -177,6 +177,10 @@ func initialiseDefaultSimulatorPreferences(pth string, deviceFinder destination.
 
 	if prefsFile == nil {
 		return nil, fmt.Errorf("couldn't initialise iphonesimulator preferences")
+	}
+
+	if _, err := prefsFile.Seek(0, io.SeekStart); err != nil {
+		return nil, err
 	}
 
 	return prefsFile, nil
