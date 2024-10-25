@@ -1,0 +1,28 @@
+format_version: "11"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+app:
+  envs:
+  - EXAMPLE_IPHONESIMULATOR_PREFERENCES_PATH: $BITRISE_SOURCE_DIR/simpref/testdata/com.apple.iphonesimulator.plist
+
+workflows:
+  check:
+    steps:
+    - git::https://github.com/bitrise-steplib/steps-check.git: { }
+
+  sample:
+    steps:
+    - change-workdir:
+        title: Switch working dir to test / _tmp dir
+        inputs:
+        - path: ./_tmp
+        - is_create_path: true
+    - path::./:
+        title: Step Test
+        inputs:
+        - iphonesimulator_preferences_pth: $EXAMPLE_IPHONESIMULATOR_PREFERENCES_PATH
+        - verbose: "yes"
+
+  generate_readme:
+    steps:
+    - git::https://github.com/bitrise-steplib/steps-readme-generator.git@main: {}
