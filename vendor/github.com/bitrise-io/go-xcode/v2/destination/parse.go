@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// DeviceList ...
 type DeviceList struct {
 	DeviceTypes []DeviceType        `json:"deviceTypes"`
 	Runtimes    []DeviceRuntime     `json:"runtimes"`
@@ -16,6 +17,8 @@ type DeviceList struct {
 }
 
 /*
+DeviceType ...
+
 	  "devicetypes" : [{
 	  "productFamily" : "iPhone",
 	  "bundlePath" : "\/Applications\/Xcode-beta.app\/Contents\/Developer\/Platforms\/iPhoneOS.platform\/Library\/Developer\/CoreSimulator\/Profiles\/DeviceTypes\/iPhone 11.simdevicetype",
@@ -35,6 +38,8 @@ type DeviceType struct {
 }
 
 /*
+DeviceRuntime ...
+
 	  "runtimes" : [
 	    {
 	      "bundlePath" : "\/Library\/Developer\/CoreSimulator\/Profiles\/Runtimes\/iOS 12.4.simruntime",
@@ -65,6 +70,8 @@ type DeviceRuntime struct {
 }
 
 /*
+Device ...
+
 	  "devices" : {
 	    "com.apple.CoreSimulator.SimRuntime.watchOS-7-4" : [
 	      {
@@ -101,10 +108,10 @@ type Device struct {
 	UDID              string `json:"udid"`
 	State             string `json:"state"`
 
-	Type     string
-	Platform string
-	OS       string
-	Arch     string
+	Type     string `json:"-"`
+	Platform string `json:"-"`
+	OS       string `json:"-"`
+	Arch     string `json:"-"`
 }
 
 // XcodebuildDestination returns the required xcodebuild -destination flag value for a device
